@@ -23,16 +23,28 @@ import {
   getTransferRecords,
   getTransactions,
   getTruthEvents,
+  getWalletLinks,
   getAuditLogs,
   countBondHoldingRecipients,
   findInvestorByEmail,
+  getOpenReservedUnitsForInvestor,
   listBondDistributionRecipients,
+  createWalletLink,
+  updateWalletLink,
   updateMarketListing,
   upsertBondHolding,
   updateBond
 } from "../lib/repository.js";
 import { resetDatabase } from "../lib/db.js";
 import { buildTelemetryReading, evaluateBondForDistribution } from "../services/guardianService.js";
+import {
+  importGuardianPolicyArtifact,
+  listComplianceCases,
+  listGuardianPolicies,
+  publishGuardianPolicy,
+  resolveComplianceCase,
+  runGuardianComplianceReview
+} from "../services/guardianPolicyService.js";
 import {
   createConsensusTopic,
   createFractionalBondToken,
@@ -79,10 +91,14 @@ function assertInvestorScope(req, investorId) {
   }
 }
 
-function evaluateTransferPreflight({ bond, fromInvestor, toInvestor, units }) {
+function evaluateTransferPreflight({ bond, fromInvestor, toInvestor, units, excludeListingId = null }) {
   const issues = [];
   const warnings = [];
   const sourceHolding = fromInvestor ? getBondHoldingsByBondId(bond.id).find((holding) => holding.investorId === fromInvestor.id) : null;
+  const reservedUnits = fromInvestor
+    ? getOpenReservedUnitsForInvestor(bond.id, fromInvestor.id, excludeListingId)
+    : 0;
+  const availableUnits = sourceHolding ? Math.max(0, sourceHolding.units - reservedUnits) : 0;
 
   if (!bond.tokenId) {
     issues.push("Bond has not been fractionalized on HTS yet.");
@@ -93,8 +109,8 @@ function evaluateTransferPreflight({ bond, fromInvestor, toInvestor, units }) {
       issues.push(`${fromInvestor.name} is not KYC approved.`);
     }
 
-    if (!sourceHolding || sourceHolding.units < units) {
-      issues.push(`${fromInvestor.name} does not have enough units.`);
+    if (!sourceHolding || availableUnits < units) {
+      issues.push(`${fromInvestor.name} does not have enough available units.`);
     }
 
     if (!fromInvestor.accountId) {
@@ -128,7 +144,9 @@ function evaluateTransferPreflight({ bond, fromInvestor, toInvestor, units }) {
     passed: issues.length === 0,
     issues,
     warnings,
-    sourceHolding
+    sourceHolding,
+    reservedUnits,
+    availableUnits
   };
 }
 
@@ -183,8 +201,35 @@ router.get("/transfers", (_req, res) => {
   res.json({ items: getTransferRecords() });
 });
 
+router.get("/wallet-links", requireRole(["admin", "operator"]), (_req, res) => {
+  res.json({ items: getWalletLinks() });
+});
+
+router.get("/guardian/policies", requireRole(["admin", "operator"]), (_req, res) => {
+  res.json({ items: listGuardianPolicies() });
+});
+
+router.get("/compliance/cases", requireRole(["admin", "operator"]), (_req, res) => {
+  res.json({ items: listComplianceCases() });
+});
+
 router.get("/market/listings", (_req, res) => {
   res.json({ items: getMarketListings() });
+});
+
+router.get("/audit-logs/export", requireRole(["admin"]), (_req, res) => {
+  res.setHeader("Content-Type", "text/csv");
+  res.send(
+    ["id,action,target_type,target_id,status,actor_email,created_at"]
+      .concat(
+        getAuditLogs().map((entry) =>
+          [entry.id, entry.action, entry.targetType, entry.targetId || "", entry.status, entry.actorEmail || "", entry.createdAt]
+            .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+            .join(",")
+        )
+      )
+      .join("\n")
+  );
 });
 
 router.get("/market/preflight", requireAuth, (req, res) => {
@@ -384,6 +429,130 @@ router.post("/investors", requireRole(["admin", "operator"]), rateLimit({ window
   }
 });
 
+router.post("/wallet-links", requireAuth, rateLimit({ windowMs: 60 * 1000, limit: 30 }), (req, res) => {
+  try {
+    const investor = getInvestorById(req.body?.investorId);
+
+    if (!investor) {
+      throw new Error("Investor not found.");
+    }
+
+    assertInvestorScope(req, investor.id);
+
+    const walletLink = createWalletLink({
+      investorId: investor.id,
+      walletProvider: String(req.body?.walletProvider || "hedera-wallet").trim(),
+      walletAddress: String(req.body?.walletAddress || "").trim(),
+      accountId: String(req.body?.accountId || "").trim() || null,
+      status: "pending",
+      challengeNonce: `link-${Date.now()}`
+    });
+
+    res.status(201).json({
+      ok: true,
+      message: "Wallet link challenge created.",
+      walletLink
+    });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({
+      ok: false,
+      message: error.message || "Unable to create wallet link."
+    });
+  }
+});
+
+router.post("/wallet-links/:walletLinkId/verify", requireAuth, rateLimit({ windowMs: 60 * 1000, limit: 30 }), (req, res) => {
+  try {
+    const walletLink = updateWalletLink(req.params.walletLinkId, {
+      status: "verified",
+      challengeNonce: null
+    });
+
+    if (!walletLink) {
+      throw new Error("Wallet link not found.");
+    }
+
+    assertInvestorScope(req, walletLink.investorId);
+
+    res.json({
+      ok: true,
+      message: "Wallet link verified.",
+      walletLink
+    });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({
+      ok: false,
+      message: error.message || "Unable to verify wallet link."
+    });
+  }
+});
+
+router.post("/guardian/policies", requireRole(["admin", "operator"]), rateLimit({ windowMs: 60 * 1000, limit: 20 }), (req, res) => {
+  try {
+    const policy = importGuardianPolicyArtifact({
+      bondId: req.body?.bondId || null,
+      policyName: String(req.body?.policyName || "").trim(),
+      version: String(req.body?.version || "1.0.0").trim(),
+      methodology: String(req.body?.methodology || "").trim(),
+      artifact: req.body?.artifact || {},
+      status: "draft"
+    });
+
+    res.status(201).json({
+      ok: true,
+      message: "Guardian policy artifact imported.",
+      policy
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      message: error.message || "Unable to import Guardian policy."
+    });
+  }
+});
+
+router.post("/guardian/policies/:policyId/publish", requireRole(["admin", "operator"]), rateLimit({ windowMs: 60 * 1000, limit: 20 }), (req, res) => {
+  try {
+    const policy = publishGuardianPolicy(req.params.policyId);
+
+    if (!policy) {
+      throw new Error("Guardian policy not found.");
+    }
+
+    res.json({
+      ok: true,
+      message: "Guardian policy published.",
+      policy
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      message: error.message || "Unable to publish Guardian policy."
+    });
+  }
+});
+
+router.post("/compliance/cases/:caseId/resolve", requireRole(["admin", "operator"]), rateLimit({ windowMs: 60 * 1000, limit: 20 }), (req, res) => {
+  try {
+    const caseRecord = resolveComplianceCase(req.params.caseId, String(req.body?.resolutionNotes || "").trim());
+
+    if (!caseRecord) {
+      throw new Error("Compliance case not found.");
+    }
+
+    res.json({
+      ok: true,
+      message: "Compliance case resolved.",
+      caseRecord
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      message: error.message || "Unable to resolve compliance case."
+    });
+  }
+});
+
 router.post("/market/listings", requireAuth, rateLimit({ windowMs: 60 * 1000, limit: 30 }), (req, res) => {
   try {
     if (!["admin", "operator", "investor"].includes(req.auth.user.role)) {
@@ -417,6 +586,12 @@ router.post("/market/listings", requireAuth, rateLimit({ windowMs: 60 * 1000, li
     });
 
     if (!preflight.passed) {
+      runGuardianComplianceReview({
+        bond,
+        investor: sellerInvestor,
+        listing: null,
+        preflight
+      });
       return res.status(400).json({
         ok: false,
         message: "Listing failed compliance preflight.",
@@ -528,10 +703,17 @@ router.post("/market/listings/:listingId/fill", requireAuth, rateLimit({ windowM
       bond,
       fromInvestor: sellerInvestor,
       toInvestor: buyerInvestor,
-      units: listing.units
+      units: listing.units,
+      excludeListingId: listing.id
     });
 
     if (!preflight.passed) {
+      runGuardianComplianceReview({
+        bond,
+        investor: buyerInvestor,
+        listing,
+        preflight
+      });
       return res.status(400).json({
         ok: false,
         message: "Listing fill failed compliance preflight.",
@@ -1015,9 +1197,11 @@ router.post("/actions/transfer-holdings", requireRole(["admin", "operator"]), ra
     }
 
     const sourceHolding = getBondHoldingsByBondId(bond.id).find((holding) => holding.investorId === fromInvestor.id);
+    const reservedUnits = getOpenReservedUnitsForInvestor(bond.id, fromInvestor.id);
+    const availableUnits = Math.max(0, (sourceHolding?.units || 0) - reservedUnits);
 
-    if (!sourceHolding || sourceHolding.units < Math.round(units)) {
-      throw new Error(`${fromInvestor.name} does not have enough units for this transfer.`);
+    if (!sourceHolding || availableUnits < Math.round(units)) {
+      throw new Error(`${fromInvestor.name} does not have enough available units for this transfer.`);
     }
 
     const transfer = await transferFractionalBondUnits(

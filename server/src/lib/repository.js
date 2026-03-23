@@ -214,6 +214,55 @@ function mapMarketListing(row) {
   };
 }
 
+function mapWalletLink(row) {
+  return {
+    id: row.id,
+    investorId: row.investor_id,
+    walletProvider: row.wallet_provider,
+    walletAddress: row.wallet_address,
+    accountId: row.account_id,
+    status: row.status,
+    challengeNonce: row.challenge_nonce,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    investorName: row.investor_name
+  };
+}
+
+function mapGuardianPolicy(row) {
+  return {
+    id: row.id,
+    bondId: row.bond_id,
+    policyName: row.policy_name,
+    version: row.version,
+    status: row.status,
+    methodology: row.methodology,
+    artifact: JSON.parse(row.artifact_json),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    bondName: row.bond_name
+  };
+}
+
+function mapComplianceCase(row) {
+  return {
+    id: row.id,
+    bondId: row.bond_id,
+    investorId: row.investor_id,
+    listingId: row.listing_id,
+    caseType: row.case_type,
+    status: row.status,
+    severity: row.severity,
+    summary: row.summary,
+    details: JSON.parse(row.details_json),
+    resolutionNotes: row.resolution_notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    bondName: row.bond_name,
+    investorName: row.investor_name
+  };
+}
+
 export function getBonds() {
   return getDb()
     .prepare("SELECT * FROM bonds ORDER BY created_at DESC")
@@ -950,4 +999,257 @@ export function getMarketListingsByInvestorId(investorId, limit = 50) {
     `)
     .all(investorId, investorId, limit)
     .map(mapMarketListing);
+}
+
+export function getOpenReservedUnitsForInvestor(bondId, sellerInvestorId, excludeListingId = null) {
+  const row = getDb()
+    .prepare(`
+      SELECT COALESCE(SUM(units), 0) AS reserved_units
+      FROM market_listings
+      WHERE bond_id = ?
+        AND seller_investor_id = ?
+        AND status = 'open'
+        AND (? IS NULL OR id != ?)
+    `)
+    .get(bondId, sellerInvestorId, excludeListingId, excludeListingId);
+
+  return Number(row?.reserved_units || 0);
+}
+
+export function createWalletLink(input) {
+  const id = input.id || `wallet-${randomUUID().slice(0, 8)}`;
+  const now = currentTimestamp();
+  getDb().prepare(`
+    INSERT INTO wallet_links (
+      id, investor_id, wallet_provider, wallet_address, account_id, status, challenge_nonce, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.investorId,
+    input.walletProvider,
+    input.walletAddress,
+    input.accountId || null,
+    input.status || "pending",
+    input.challengeNonce || null,
+    now,
+    now
+  );
+
+  return getWalletLinkById(id);
+}
+
+export function getWalletLinkById(id) {
+  const row = getDb()
+    .prepare(`
+      SELECT w.*, i.name AS investor_name
+      FROM wallet_links w
+      JOIN investors i ON i.id = w.investor_id
+      WHERE w.id = ?
+    `)
+    .get(id);
+
+  return row ? mapWalletLink(row) : null;
+}
+
+export function getWalletLinks(limit = 100) {
+  return getDb()
+    .prepare(`
+      SELECT w.*, i.name AS investor_name
+      FROM wallet_links w
+      JOIN investors i ON i.id = w.investor_id
+      ORDER BY w.updated_at DESC
+      LIMIT ?
+    `)
+    .all(limit)
+    .map(mapWalletLink);
+}
+
+export function getWalletLinksByInvestorId(investorId) {
+  return getDb()
+    .prepare(`
+      SELECT w.*, i.name AS investor_name
+      FROM wallet_links w
+      JOIN investors i ON i.id = w.investor_id
+      WHERE w.investor_id = ?
+      ORDER BY w.updated_at DESC
+    `)
+    .all(investorId)
+    .map(mapWalletLink);
+}
+
+export function updateWalletLink(id, patch) {
+  const existing = getWalletLinkById(id);
+
+  if (!existing) {
+    return null;
+  }
+
+  const next = { ...existing, ...patch, updatedAt: currentTimestamp() };
+  getDb().prepare(`
+    UPDATE wallet_links
+    SET wallet_provider = ?, wallet_address = ?, account_id = ?, status = ?, challenge_nonce = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    next.walletProvider,
+    next.walletAddress,
+    next.accountId || null,
+    next.status,
+    next.challengeNonce || null,
+    next.updatedAt,
+    id
+  );
+
+  return getWalletLinkById(id);
+}
+
+export function createGuardianPolicy(input) {
+  const id = input.id || `policy-${randomUUID().slice(0, 8)}`;
+  const now = currentTimestamp();
+  getDb().prepare(`
+    INSERT INTO guardian_policies (
+      id, bond_id, policy_name, version, status, methodology, artifact_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.bondId || null,
+    input.policyName,
+    input.version,
+    input.status || "draft",
+    input.methodology,
+    JSON.stringify(input.artifact || {}),
+    now,
+    now
+  );
+
+  return getGuardianPolicyById(id);
+}
+
+export function getGuardianPolicyById(id) {
+  const row = getDb()
+    .prepare(`
+      SELECT p.*, b.name AS bond_name
+      FROM guardian_policies p
+      LEFT JOIN bonds b ON b.id = p.bond_id
+      WHERE p.id = ?
+    `)
+    .get(id);
+
+  return row ? mapGuardianPolicy(row) : null;
+}
+
+export function getGuardianPolicies(limit = 100) {
+  return getDb()
+    .prepare(`
+      SELECT p.*, b.name AS bond_name
+      FROM guardian_policies p
+      LEFT JOIN bonds b ON b.id = p.bond_id
+      ORDER BY p.updated_at DESC
+      LIMIT ?
+    `)
+    .all(limit)
+    .map(mapGuardianPolicy);
+}
+
+export function updateGuardianPolicy(id, patch) {
+  const existing = getGuardianPolicyById(id);
+
+  if (!existing) {
+    return null;
+  }
+
+  const next = { ...existing, ...patch, updatedAt: currentTimestamp() };
+  getDb().prepare(`
+    UPDATE guardian_policies
+    SET bond_id = ?, policy_name = ?, version = ?, status = ?, methodology = ?, artifact_json = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    next.bondId || null,
+    next.policyName,
+    next.version,
+    next.status,
+    next.methodology,
+    JSON.stringify(next.artifact || {}),
+    next.updatedAt,
+    id
+  );
+
+  return getGuardianPolicyById(id);
+}
+
+export function createComplianceCase(input) {
+  const id = input.id || `case-${randomUUID().slice(0, 8)}`;
+  const now = currentTimestamp();
+  getDb().prepare(`
+    INSERT INTO compliance_cases (
+      id, bond_id, investor_id, listing_id, case_type, status, severity, summary, details_json, resolution_notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.bondId || null,
+    input.investorId || null,
+    input.listingId || null,
+    input.caseType,
+    input.status || "open",
+    input.severity || "medium",
+    input.summary,
+    JSON.stringify(input.details || {}),
+    input.resolutionNotes || null,
+    now,
+    now
+  );
+
+  return getComplianceCaseById(id);
+}
+
+export function getComplianceCaseById(id) {
+  const row = getDb()
+    .prepare(`
+      SELECT c.*, b.name AS bond_name, i.name AS investor_name
+      FROM compliance_cases c
+      LEFT JOIN bonds b ON b.id = c.bond_id
+      LEFT JOIN investors i ON i.id = c.investor_id
+      WHERE c.id = ?
+    `)
+    .get(id);
+
+  return row ? mapComplianceCase(row) : null;
+}
+
+export function getComplianceCases(limit = 100) {
+  return getDb()
+    .prepare(`
+      SELECT c.*, b.name AS bond_name, i.name AS investor_name
+      FROM compliance_cases c
+      LEFT JOIN bonds b ON b.id = c.bond_id
+      LEFT JOIN investors i ON i.id = c.investor_id
+      ORDER BY c.updated_at DESC
+      LIMIT ?
+    `)
+    .all(limit)
+    .map(mapComplianceCase);
+}
+
+export function updateComplianceCase(id, patch) {
+  const existing = getComplianceCaseById(id);
+
+  if (!existing) {
+    return null;
+  }
+
+  const next = { ...existing, ...patch, updatedAt: currentTimestamp() };
+  getDb().prepare(`
+    UPDATE compliance_cases
+    SET status = ?, severity = ?, summary = ?, details_json = ?, resolution_notes = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    next.status,
+    next.severity,
+    next.summary,
+    JSON.stringify(next.details || {}),
+    next.resolutionNotes || null,
+    next.updatedAt,
+    id
+  );
+
+  return getComplianceCaseById(id);
 }

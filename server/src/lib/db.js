@@ -207,6 +207,51 @@ function initializeSchema(db) {
       FOREIGN KEY (buyer_investor_id) REFERENCES investors(id),
       FOREIGN KEY (transaction_id) REFERENCES transactions(id)
     );
+
+    CREATE TABLE IF NOT EXISTS wallet_links (
+      id TEXT PRIMARY KEY,
+      investor_id TEXT NOT NULL,
+      wallet_provider TEXT NOT NULL,
+      wallet_address TEXT NOT NULL,
+      account_id TEXT,
+      status TEXT NOT NULL,
+      challenge_nonce TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (investor_id, wallet_address),
+      FOREIGN KEY (investor_id) REFERENCES investors(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS guardian_policies (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT,
+      policy_name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      status TEXT NOT NULL,
+      methodology TEXT NOT NULL,
+      artifact_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (bond_id) REFERENCES bonds(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS compliance_cases (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT,
+      investor_id TEXT,
+      listing_id TEXT,
+      case_type TEXT NOT NULL,
+      status TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      details_json TEXT NOT NULL,
+      resolution_notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (bond_id) REFERENCES bonds(id),
+      FOREIGN KEY (investor_id) REFERENCES investors(id),
+      FOREIGN KEY (listing_id) REFERENCES market_listings(id)
+    );
   `);
 
   const userColumns = db.prepare("PRAGMA table_info(users)").all();
@@ -368,6 +413,9 @@ export function resetDatabase() {
     DELETE FROM payout_records;
     DELETE FROM transfer_records;
     DELETE FROM market_listings;
+    DELETE FROM wallet_links;
+    DELETE FROM guardian_policies;
+    DELETE FROM compliance_cases;
     DELETE FROM bond_holdings;
     DELETE FROM investors;
     DELETE FROM transactions;

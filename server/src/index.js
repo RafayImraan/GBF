@@ -4,19 +4,35 @@ import express from "express";
 import apiRouter from "./routes/api.js";
 import authRouter from "./routes/auth.js";
 import { getDb } from "./lib/db.js";
+import { appConfig, validateEnvironment } from "./lib/env.js";
+import { logEvent } from "./lib/logger.js";
+import { metricsMiddleware, snapshotMetrics } from "./lib/metrics.js";
 import { attachAuth } from "./middleware/auth.js";
+import { requestContext, securityHeaders } from "./middleware/security.js";
 
 const app = express();
-const port = process.env.PORT || 4000;
+const config = appConfig();
+const validation = validateEnvironment();
 
 getDb();
 
+if (!validation.ok) {
+  throw new Error(validation.errors.join(" "));
+}
+
+for (const warning of validation.warnings) {
+  logEvent("warn", warning, { scope: "startup" });
+}
+
 app.use(
   cors({
-    origin: "*"
+    origin: config.corsOrigin
   })
 );
-app.use(express.json());
+app.use(requestContext);
+app.use(securityHeaders);
+app.use(express.json({ limit: config.bodyLimit }));
+app.use(metricsMiddleware);
 app.use(attachAuth);
 
 app.get("/", (_req, res) => {
@@ -32,9 +48,26 @@ app.get("/", (_req, res) => {
   });
 });
 
+app.get("/metrics", (_req, res) => {
+  if (!config.metricsEnabled) {
+    return res.status(404).json({
+      ok: false,
+      message: "Metrics endpoint is disabled."
+    });
+  }
+
+  return res.json({
+    ok: true,
+    metrics: snapshotMetrics()
+  });
+});
+
 app.use("/api", apiRouter);
 app.use("/auth", authRouter);
 
-app.listen(port, () => {
-  console.log(`GBF API listening on http://localhost:${port}`);
+app.listen(config.port, () => {
+  logEvent("info", "GBF API listening", {
+    port: config.port,
+    network: config.hederaNetwork
+  });
 });

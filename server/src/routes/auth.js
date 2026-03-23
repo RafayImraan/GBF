@@ -7,6 +7,7 @@ import {
   hashToken,
   verifyPassword
 } from "../lib/auth.js";
+import { trackAuthFailure } from "../lib/metrics.js";
 import {
   createAuditLog,
   createSession,
@@ -27,6 +28,7 @@ router.post("/login", rateLimit({ windowMs: 60 * 1000, limit: 8 }), (req, res) =
   const user = findUserByEmail(email);
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
+    trackAuthFailure();
     createAuditLog({
       actorEmail: email,
       action: "auth.login",

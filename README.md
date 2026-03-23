@@ -16,6 +16,7 @@ GBF is a full-stack DeFi project that democratizes access to institutional green
 - Backend: Node.js, Express
 - Persistence: SQLite-backed lifecycle store
 - Hedera integration: `@hashgraph/sdk` with automatic fallback when live provisioning fails
+- Ops/security: structured logging, request IDs, security headers, metrics, signer isolation, launch gating
 
 ## Project layout
 
@@ -52,6 +53,8 @@ For live Hedera testnet execution, provide:
 - `HEDERA_TREASURY_ACCOUNT_ID`
 - `HEDERA_ENABLE_LIVE_SIGNING=true`
 - `HEDERA_SIGNER_MODE=local` or `HEDERA_SIGNER_MODE=remote`
+- `GBF_ENABLE_MAINNET=false` until explicit mainnet approval
+- `GBF_CORS_ORIGIN=http://localhost:5173`
 - `GBF_ADMIN_EMAIL`
 - `GBF_ADMIN_PASSWORD`
 
@@ -79,10 +82,17 @@ Signer deployment modes:
 - `GET /api/bonds`
 - `GET /api/truth-stream`
 - `GET /api/transactions`
+- `GET /api/market/listings`
+- `GET /api/guardian/policies`
+- `GET /api/compliance/cases`
+- `GET /api/wallet-links`
 - `POST /api/bonds`
 - `POST /api/actions/fractionalize`
 - `POST /api/actions/sync-impact`
 - `POST /api/actions/distribute-yield`
+- `POST /api/actions/settle-allocation`
+- `POST /api/actions/transfer-holdings`
+- `POST /api/market/listings`
 - `POST /api/demo/reset`
 
 ## Demo flow
@@ -103,3 +113,10 @@ Signer deployment modes:
 ## Architecture
 
 See [docs/architecture.md](c:\Users\HomePC\Desktop\GBF\docs\architecture.md) for the system design and [docs/demo-script.md](c:\Users\HomePC\Desktop\GBF\docs\demo-script.md) for a short judge-ready walkthrough.
+
+## Additional launch assets
+
+- [launch-checklist.md](c:\Users\HomePC\Desktop\GBF\docs\launch-checklist.md)
+- [risk-disclosures.md](c:\Users\HomePC\Desktop\GBF\docs\risk-disclosures.md)
+- `docker-compose.yml`
+- `.github/workflows/ci.yml`

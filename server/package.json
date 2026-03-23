@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "seed": "node scripts/seedState.js",
     "signer": "node signer/index.js",
-    "signer:dev": "node --watch signer/index.js"
+    "signer:dev": "node --watch signer/index.js",
+    "test": "node --test --test-isolation=none tests/*.test.js"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.81.0",

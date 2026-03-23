@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createTopic, createToken, getRemoteSignerStatus, publishMessage, scheduleYield, transferToken } from "./service.js";
+import { requestContext, securityHeaders } from "../src/middleware/security.js";
+import { logEvent } from "../src/lib/logger.js";
 
 const app = express();
 const port = Number(process.env.HEDERA_REMOTE_SIGNER_PORT || 8787);
@@ -28,6 +30,8 @@ function requireBearerToken(req, res, next) {
 }
 
 app.use(express.json());
+app.use(requestContext);
+app.use(securityHeaders);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -93,5 +97,8 @@ app.post("/hedera/transfer-token", requireBearerToken, async (req, res) => {
 });
 
 app.listen(port, bind, () => {
-  console.log(`GBF remote signer listening on http://${bind}:${port}`);
+  logEvent("info", "GBF remote signer listening", {
+    bind,
+    port
+  });
 });

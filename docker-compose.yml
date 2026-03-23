@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  gbf-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - server/.env
+    restart: unless-stopped
+
+  gbf-signer:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.signer
+    ports:
+      - "8787:8787"
+    env_file:
+      - server/.env
+    restart: unless-stopped
