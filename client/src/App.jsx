@@ -608,43 +608,55 @@ export default function App() {
       <div className="absolute inset-0 -z-10 bg-hero-grid" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(circle_at_top,_rgba(110,231,183,0.12),_transparent_50%),radial-gradient(circle_at_top_right,_rgba(244,208,63,0.12),_transparent_35%)]" />
 
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/85 backdrop-blur-xl">
         <div className="mx-auto max-w-[92rem] px-5 py-4 md:px-8 xl:px-10">
-          <div className="flex items-center gap-4 xl:grid xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(18rem,1fr)] xl:gap-8">
-          <button className="flex min-w-0 shrink-0 items-center gap-4 text-left" onClick={() => navigateTo("overview")}>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-mint-300/20 bg-mint-300/10 text-mint-200"><Waves className="h-5 w-5" /></div>
-            <div className="min-w-0 xl:max-w-[23rem]">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">GBF Platform</p>
-              <p className="mt-1 text-xl font-semibold leading-tight text-white xl:whitespace-nowrap">Global Green-Bond Fractionalizer</p>
-            </div>
-          </button>
+          <div className="flex items-center justify-between gap-4">
+            <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => navigateTo("overview")}>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-mint-300/20 bg-mint-300/10 text-mint-200">
+                <Waves className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">GBF Platform</p>
+                <p className="mt-1 max-w-[16rem] text-xl font-semibold leading-tight text-white sm:max-w-none">
+                  Global Green-Bond Fractionalizer
+                </p>
+              </div>
+            </button>
 
-          <div className="hidden justify-center xl:flex">
+            <div className="ml-auto hidden flex-wrap items-center justify-end gap-3 lg:flex">
+              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300">
+                {overview?.network || "testnet"}
+              </div>
+              {user ? (
+                <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
+                  <span className="whitespace-nowrap font-medium text-white">{user.name}</span>
+                  <span className="rounded-full bg-white/6 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-400">{user.role}</span>
+                  <button className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium text-white" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <form className="flex flex-wrap items-center justify-end gap-2" onSubmit={handleLogin}>
+                  <input className="w-32 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none xl:w-40" placeholder="Email" value={loginForm.email} onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))} />
+                  <input className="w-28 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none xl:w-36" placeholder="Password" type="password" value={loginForm.password} onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))} />
+                  <button className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-ink-950" type="submit">
+                    <Lock className="h-4 w-4" />
+                    Sign in
+                  </button>
+                </form>
+              )}
+            </div>
+
+            <button className="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 xl:hidden" onClick={() => setMobileNavOpen((current) => !current)}>
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+
+          <div className="mt-5 hidden justify-center xl:flex">
             <nav className="flex items-center justify-center gap-2 rounded-[1.75rem] border border-white/10 bg-white/5 p-2 shadow-panel backdrop-blur">
               {navItems}
             </nav>
-          </div>
-
-          <div className="ml-auto hidden flex-wrap items-center justify-end gap-3 lg:flex xl:ml-0">
-            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300">{overview?.network || "testnet"}</div>
-            {user ? (
-              <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
-                <span className="whitespace-nowrap font-medium text-white">{user.name}</span>
-                <span className="rounded-full bg-white/6 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-400">{user.role}</span>
-                <button className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium text-white" onClick={handleLogout}><LogOut className="h-4 w-4" />Sign out</button>
-              </div>
-            ) : (
-              <form className="flex flex-wrap items-center justify-end gap-2" onSubmit={handleLogin}>
-                <input className="w-32 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none xl:w-40" placeholder="Email" value={loginForm.email} onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))} />
-                <input className="w-28 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none xl:w-36" placeholder="Password" type="password" value={loginForm.password} onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))} />
-                <button className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-ink-950" type="submit"><Lock className="h-4 w-4" />Sign in</button>
-              </form>
-            )}
-          </div>
-
-          <button className="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 xl:hidden" onClick={() => setMobileNavOpen((current) => !current)}>
-            {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
           </div>
         </div>
 
