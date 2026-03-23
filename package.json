@@ -1,0 +1,14 @@
+{
+  "name": "global-green-bond-fractionalizer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Global Green-Bond Fractionalizer (GBF) full-stack demo on Hedera testnet concepts",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
