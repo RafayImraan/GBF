@@ -862,19 +862,6 @@ router.post("/actions/fractionalize", requireRole(["admin", "operator"]), rateLi
         fallbackReason: hedera.fallbackReason || null
       }
     });
-    for (const recipient of recipients) {
-      createPayoutRecord({
-        bondId: bond.id,
-        investorId: recipient.investorId,
-        transactionId: transaction.id,
-        scheduledTxId: hedera.scheduledTxId,
-        amount: recipient.payoutAmount,
-        units: recipient.units,
-        network: hedera.network,
-        integrationMode: hedera.integrationMode,
-        status: "scheduled"
-      });
-    }
     createAuditLog({
       actorUserId: req.auth.user.id,
       actorEmail: req.auth.user.email,

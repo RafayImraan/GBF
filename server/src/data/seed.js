@@ -87,9 +87,9 @@ export const bondSeeds = [
 export const investorSeeds = [
   {
     id: "inv-nadia-khan",
-    name: "Nadia Khan",
-    email: "nadia@invest.gbf",
-    walletAlias: "GBF-NADIA-01",
+    name: "Maaz Khan",
+    email: "maaz@invest.gbf",
+    walletAlias: "GBF-MAAZ-01",
     accountId: "0.0.910001",
     region: "Pakistan",
     kycStatus: "approved",

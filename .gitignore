@@ -7,3 +7,4 @@ client/dist
 server/data/*.sqlite
 server/data/*.sqlite-shm
 server/data/*.sqlite-wal
+docs/
