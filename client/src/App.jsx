@@ -612,10 +612,10 @@ export default function App() {
         <div className="mx-auto max-w-[92rem] px-5 py-4 md:px-8 xl:px-10">
           <div className="flex items-center gap-4 xl:grid xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(18rem,1fr)] xl:gap-8">
           <button className="flex min-w-0 shrink-0 items-center gap-4 text-left" onClick={() => navigateTo("overview")}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-mint-300/20 bg-mint-300/10 text-mint-200"><Waves className="h-5 w-5" /></div>
-            <div className="min-w-0">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-mint-300/20 bg-mint-300/10 text-mint-200"><Waves className="h-5 w-5" /></div>
+            <div className="min-w-0 xl:max-w-[23rem]">
               <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">GBF Platform</p>
-              <p className="mt-1 text-lg font-semibold leading-tight text-white">Global Green-Bond Fractionalizer</p>
+              <p className="mt-1 text-xl font-semibold leading-tight text-white xl:whitespace-nowrap">Global Green-Bond Fractionalizer</p>
             </div>
           </button>
 
@@ -626,12 +626,12 @@ export default function App() {
           </div>
 
           <div className="ml-auto hidden flex-wrap items-center justify-end gap-3 lg:flex xl:ml-0">
-            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300">{overview?.network || "testnet"}</div>
+            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300">{overview?.network || "testnet"}</div>
             {user ? (
               <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
-                <span className="font-medium text-white">{user.name}</span>
+                <span className="whitespace-nowrap font-medium text-white">{user.name}</span>
                 <span className="rounded-full bg-white/6 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-400">{user.role}</span>
-                <button className="inline-flex items-center gap-2 text-sm font-medium text-white" onClick={handleLogout}><LogOut className="h-4 w-4" />Sign out</button>
+                <button className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium text-white" onClick={handleLogout}><LogOut className="h-4 w-4" />Sign out</button>
               </div>
             ) : (
               <form className="flex flex-wrap items-center justify-end gap-2" onSubmit={handleLogin}>
