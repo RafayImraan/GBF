@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "seed": "node scripts/seedState.js"
+    "seed": "node scripts/seedState.js",
+    "signer": "node signer/index.js",
+    "signer:dev": "node --watch signer/index.js"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.81.0",

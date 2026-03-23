@@ -15,11 +15,13 @@ export function buildNarrative() {
   };
 }
 
-export function computeProtocolHealth({ bonds, truthEvents, transactions }) {
+export function computeProtocolHealth({ bonds, truthEvents, transactions, investors = [], holdings = [] }) {
   const lastTransaction = transactions[0] || null;
 
   return {
     bondsTracked: bonds.length,
+    investorsTracked: investors.length,
+    holdingsTracked: holdings.length,
     truthEvents: truthEvents.length,
     transactionsLogged: transactions.length,
     storage: "sqlite",

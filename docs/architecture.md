@@ -6,6 +6,7 @@ GBF Phase 1 is structured as a two-tier application:
 
 - `client/` delivers the investor and operator experience through a Vite + React dashboard.
 - `server/` exposes protocol APIs, persists lifecycle state in SQLite, evaluates Guardian-style policy rules, and calls Hedera services when credentials are configured.
+- `server/signer/` can run as a separate remote signer process so live Hedera keys do not need to live in the main API process.
 
 ## Core data flows
 
@@ -60,8 +61,11 @@ Real Hedera calls are enabled through environment variables in `server/.env`:
 - `HEDERA_OPERATOR_ID`
 - `HEDERA_OPERATOR_KEY`
 - `HEDERA_TREASURY_ACCOUNT_ID`
+- `HEDERA_SIGNER_MODE`
+- `HEDERA_REMOTE_SIGNER_URL`
+- `HEDERA_REMOTE_SIGNER_TOKEN`
 
-When these are missing or invalid, GBF automatically runs in fallback mode and clearly marks transactions that way in the UI.
+When signer mode is `remote`, the API sends Hedera actions to the dedicated signer process and no longer needs to own the signing implementation directly.
 
 ## Demo story
 

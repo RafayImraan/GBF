@@ -83,3 +83,60 @@ export const bondSeeds = [
     onboardingMode: "pending"
   }
 ];
+
+export const investorSeeds = [
+  {
+    id: "inv-nadia-khan",
+    name: "Nadia Khan",
+    email: "nadia@invest.gbf",
+    walletAlias: "GBF-NADIA-01",
+    accountId: "0.0.910001",
+    region: "Pakistan",
+    kycStatus: "approved",
+    riskTier: "balanced"
+  },
+  {
+    id: "inv-omar-reyes",
+    name: "Omar Reyes",
+    email: "omar@invest.gbf",
+    walletAlias: "GBF-OMAR-02",
+    accountId: "0.0.910002",
+    region: "UAE",
+    kycStatus: "approved",
+    riskTier: "income"
+  },
+  {
+    id: "inv-lina-park",
+    name: "Lina Park",
+    email: "lina@invest.gbf",
+    walletAlias: "GBF-LINA-03",
+    accountId: "0.0.910003",
+    region: "Singapore",
+    kycStatus: "approved",
+    riskTier: "growth"
+  }
+];
+
+export const holdingSeeds = [
+  {
+    id: "hold-wind-nadia",
+    bondId: "gbf-wind-2028",
+    investorId: "inv-nadia-khan",
+    units: 1200,
+    costBasis: 1200
+  },
+  {
+    id: "hold-wind-omar",
+    bondId: "gbf-wind-2028",
+    investorId: "inv-omar-reyes",
+    units: 850,
+    costBasis: 850
+  },
+  {
+    id: "hold-carbon-lina",
+    bondId: "gbf-carbon-2029",
+    investorId: "inv-lina-park",
+    units: 2100,
+    costBasis: 2100
+  }
+];

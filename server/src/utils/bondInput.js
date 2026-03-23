@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 function slugify(value) {
   return value
     .toLowerCase()
@@ -34,8 +36,11 @@ export function normalizeBondInput(body) {
     throw new Error("Telemetry base value must be zero or greater.");
   }
 
+  const year = maturity.slice(0, 4);
+  const uniqueSuffix = randomUUID().slice(0, 6);
+
   return {
-    id: body?.id || `bond-${slugify(name)}-${maturity.slice(0, 4)}`,
+    id: body?.id || `bond-${slugify(name)}-${year}-${uniqueSuffix}`,
     name,
     issuer,
     category,

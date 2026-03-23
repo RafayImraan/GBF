@@ -50,8 +50,18 @@ For live Hedera testnet execution, provide:
 - `HEDERA_OPERATOR_ID`
 - `HEDERA_OPERATOR_KEY`
 - `HEDERA_TREASURY_ACCOUNT_ID`
+- `HEDERA_ENABLE_LIVE_SIGNING=true`
+- `HEDERA_SIGNER_MODE=local` or `HEDERA_SIGNER_MODE=remote`
+- `GBF_ADMIN_EMAIL`
+- `GBF_ADMIN_PASSWORD`
 
-If these are missing or invalid, GBF still runs in fallback mode and labels transactions clearly in the UI.
+If `HEDERA_ENABLE_LIVE_SIGNING` is not explicitly set to `true`, GBF keeps Hedera execution in fallback mode even when credentials exist. This is the safer default for live deployment work.
+
+Signer deployment modes:
+
+- `disabled`: no live signing
+- `local`: the main API signs in-process
+- `remote`: the main API delegates Hedera execution to the remote signer service in `server/signer`
 
 ## Useful scripts
 
@@ -59,6 +69,7 @@ If these are missing or invalid, GBF still runs in fallback mode and labels tran
  npm run dev
  npm run build --prefix client
  npm run seed --prefix server
+ npm run signer --prefix server
  ```
 
 ## API highlights
@@ -81,6 +92,13 @@ If these are missing or invalid, GBF still runs in fallback mode and labels tran
 3. Mint FBTs from the operator console.
 4. Publish a new dMRV event and watch impact progress update.
 5. Schedule coupon distribution after Guardian checks pass.
+
+## Auth and roles
+
+- Read-only views are public.
+- `admin` and `operator` sessions can onboard bonds and run protocol actions.
+- Only `admin` can reset the SQL database.
+- Default local admin credentials come from `GBF_ADMIN_EMAIL` and `GBF_ADMIN_PASSWORD`.
 
 ## Architecture
 

@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "url";
-import { bondSeeds, protocolOverviewSeed } from "../data/seed.js";
+import { bondSeeds, investorSeeds, holdingSeeds, protocolOverviewSeed } from "../data/seed.js";
+import { hashPassword } from "./auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,7 +95,126 @@ function initializeSchema(db) {
       details_json TEXT NOT NULL,
       FOREIGN KEY (bond_id) REFERENCES bonds(id)
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      actor_user_id TEXT,
+      actor_email TEXT,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT,
+      status TEXT NOT NULL,
+      details_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS investors (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      wallet_alias TEXT NOT NULL,
+      account_id TEXT,
+      region TEXT NOT NULL,
+      kyc_status TEXT NOT NULL,
+      risk_tier TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS bond_holdings (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT NOT NULL,
+      investor_id TEXT NOT NULL,
+      units INTEGER NOT NULL,
+      cost_basis REAL NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (bond_id, investor_id),
+      FOREIGN KEY (bond_id) REFERENCES bonds(id),
+      FOREIGN KEY (investor_id) REFERENCES investors(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS payout_records (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT NOT NULL,
+      investor_id TEXT NOT NULL,
+      transaction_id TEXT NOT NULL,
+      scheduled_tx_id TEXT,
+      amount REAL NOT NULL,
+      units INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      network TEXT NOT NULL,
+      integration_mode TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (bond_id) REFERENCES bonds(id),
+      FOREIGN KEY (investor_id) REFERENCES investors(id),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS transfer_records (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT NOT NULL,
+      token_id TEXT,
+      from_investor_id TEXT,
+      to_investor_id TEXT,
+      from_account_id TEXT,
+      to_account_id TEXT,
+      units INTEGER NOT NULL,
+      transaction_id TEXT NOT NULL,
+      hedera_tx_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      network TEXT NOT NULL,
+      integration_mode TEXT NOT NULL,
+      transfer_type TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (bond_id) REFERENCES bonds(id),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS market_listings (
+      id TEXT PRIMARY KEY,
+      bond_id TEXT NOT NULL,
+      seller_investor_id TEXT NOT NULL,
+      units INTEGER NOT NULL,
+      price_per_unit REAL NOT NULL,
+      status TEXT NOT NULL,
+      buyer_investor_id TEXT,
+      transaction_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (bond_id) REFERENCES bonds(id),
+      FOREIGN KEY (seller_investor_id) REFERENCES investors(id),
+      FOREIGN KEY (buyer_investor_id) REFERENCES investors(id),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+    );
   `);
+
+  const userColumns = db.prepare("PRAGMA table_info(users)").all();
+  const hasInvestorId = userColumns.some((column) => column.name === "investor_id");
+
+  if (!hasInvestorId) {
+    db.exec("ALTER TABLE users ADD COLUMN investor_id TEXT;");
+  }
 }
 
 function seedDatabase(db) {
@@ -159,6 +279,73 @@ function seedDatabase(db) {
       );
     }
   }
+
+  const existingUsers = db.prepare("SELECT COUNT(*) AS count FROM users").get();
+
+  if (!existingUsers.count) {
+    const email = process.env.GBF_ADMIN_EMAIL || "admin@gbf.local";
+    const password = process.env.GBF_ADMIN_PASSWORD || "ChangeMe123!";
+    const name = process.env.GBF_ADMIN_NAME || "GBF Admin";
+    db.prepare(`
+      INSERT INTO users (id, email, name, role, password_hash, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      "user-admin",
+      email.toLowerCase(),
+      name,
+      "admin",
+      hashPassword(password),
+      now,
+      now
+    );
+  }
+
+  const existingInvestors = db.prepare("SELECT COUNT(*) AS count FROM investors").get();
+
+  if (!existingInvestors.count) {
+    const insertInvestor = db.prepare(`
+      INSERT INTO investors (
+        id, name, email, wallet_alias, account_id, region, kyc_status, risk_tier, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const investor of investorSeeds) {
+      insertInvestor.run(
+        investor.id,
+        investor.name,
+        investor.email,
+        investor.walletAlias,
+        investor.accountId || null,
+        investor.region,
+        investor.kycStatus,
+        investor.riskTier,
+        now,
+        now
+      );
+    }
+  }
+
+  const existingHoldings = db.prepare("SELECT COUNT(*) AS count FROM bond_holdings").get();
+
+  if (!existingHoldings.count) {
+    const insertHolding = db.prepare(`
+      INSERT INTO bond_holdings (
+        id, bond_id, investor_id, units, cost_basis, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const holding of holdingSeeds) {
+      insertHolding.run(
+        holding.id,
+        holding.bondId,
+        holding.investorId,
+        holding.units,
+        holding.costBasis,
+        now,
+        now
+      );
+    }
+  }
 }
 
 export function getDb() {
@@ -175,6 +362,14 @@ export function getDb() {
 export function resetDatabase() {
   const db = getDb();
   db.exec(`
+    DELETE FROM sessions;
+    DELETE FROM users;
+    DELETE FROM audit_logs;
+    DELETE FROM payout_records;
+    DELETE FROM transfer_records;
+    DELETE FROM market_listings;
+    DELETE FROM bond_holdings;
+    DELETE FROM investors;
     DELETE FROM transactions;
     DELETE FROM truth_events;
     DELETE FROM bonds;
