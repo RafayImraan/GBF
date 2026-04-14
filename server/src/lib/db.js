@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "url";
@@ -7,7 +8,8 @@ import { hashPassword } from "./auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.resolve(__dirname, "../../data");
+const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const dataDir = isServerlessRuntime ? path.join(os.tmpdir(), "gbf-data") : path.resolve(__dirname, "../../data");
 const databaseFilePath = path.join(dataDir, "gbf.sqlite");
 
 let database;

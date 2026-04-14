@@ -1,5 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-const AUTH_BASE = API_BASE.replace(/\/api$/, "/auth");
+const defaultApiBase = import.meta.env.DEV ? "http://localhost:4000/api" : "/api";
+const API_BASE = import.meta.env.VITE_API_URL || defaultApiBase;
+const AUTH_BASE = API_BASE.replace(/\/api$/, "/api/auth");
 const TOKEN_KEY = "gbf_auth_token";
 
 export function getAuthToken() {
