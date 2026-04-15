@@ -70,8 +70,8 @@ app.get("/metrics", (_req, res) => {
   });
 });
 
-app.use("/api", apiRouter);
-app.use("/auth", authRouter);
 app.use("/api/auth", authRouter);
+app.use("/auth", authRouter);
+app.use("/api", apiRouter);
 
 export default app;
