@@ -202,6 +202,10 @@ export default function App() {
   const selectedBondHoldings = holdings.filter((holding) => holding.bondId === selectedBondId);
   const currentPage = navigationItems.find((item) => item.id === activePage) || navigationItems[0];
 
+  function resolvedValue(result, fallback) {
+    return result.status === "fulfilled" ? result.value : fallback;
+  }
+
   async function loadData(showLoader = false) {
     if (showLoader) {
       setRefreshing(true);
@@ -214,7 +218,17 @@ export default function App() {
         meResponse = await fetchAuth("/me").catch(() => null);
       }
 
-      const [overviewResponse, bondsResponse, streamResponse, transactionResponse, investorResponse, holdingsResponse, payoutResponse, transferResponse, listingResponse] = await Promise.all([
+      const [
+        overviewResult,
+        bondsResult,
+        streamResult,
+        transactionResult,
+        investorResult,
+        holdingsResult,
+        payoutResult,
+        transferResult,
+        listingResult
+      ] = await Promise.allSettled([
         fetchJson("/overview"),
         fetchJson("/bonds"),
         fetchJson("/truth-stream"),
@@ -225,6 +239,20 @@ export default function App() {
         fetchJson("/transfers"),
         fetchJson("/market/listings")
       ]);
+
+      const overviewResponse = resolvedValue(overviewResult, null);
+      const bondsResponse = resolvedValue(bondsResult, { items: [] });
+      const streamResponse = resolvedValue(streamResult, { items: [] });
+      const transactionResponse = resolvedValue(transactionResult, { items: [] });
+      const investorResponse = resolvedValue(investorResult, { items: [] });
+      const holdingsResponse = resolvedValue(holdingsResult, { items: [] });
+      const payoutResponse = resolvedValue(payoutResult, { items: [] });
+      const transferResponse = resolvedValue(transferResult, { items: [] });
+      const listingResponse = resolvedValue(listingResult, { items: [] });
+
+      if (!overviewResponse) {
+        throw overviewResult.reason || new Error("Unable to load protocol overview.");
+      }
 
       let userResponse = { items: [] };
       let auditResponse = { items: [] };
