@@ -4,12 +4,12 @@ import { appConfig, validateEnvironment } from "../src/lib/env.js";
 
 test("appConfig reads core server settings", () => {
   process.env.PORT = "4500";
-  process.env.GBF_CORS_ORIGIN = "http://localhost:5173";
+  process.env.GBF_CORS_ORIGIN = "http://localhost:5173, https://gbf-theta.vercel.app";
 
   const config = appConfig();
 
   assert.equal(config.port, 4500);
-  assert.equal(config.corsOrigin, "http://localhost:5173");
+  assert.deepEqual(config.corsOrigins, ["http://localhost:5173", "https://gbf-theta.vercel.app"]);
 });
 
 test("validateEnvironment blocks mainnet unless explicitly enabled", () => {

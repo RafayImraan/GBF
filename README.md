@@ -2,6 +2,8 @@
 
 GBF is a full-stack DeFi project that democratizes access to institutional green bonds by fractionalizing them into $1 units and pairing every investment flow with live, verifiable ecological evidence on Hedera rails.
 
+The repo can now run as a Vercel-only demo deployment. Railway is not required unless you want to host a separate API or signer service.
+
 ## What GBF delivers
 
 - Fractional green bond issuance through a real-or-simulated HTS integration layer
@@ -45,7 +47,16 @@ If `4000` is already in use, start the server with another port such as `PORT=41
 
 Copy `server/.env.example` to `server/.env`.
 
-For live Hedera testnet execution, provide:
+For local development or a Vercel-only demo, these defaults are enough:
+
+- `HEDERA_NETWORK=testnet`
+- `HEDERA_ENABLE_LIVE_SIGNING=false`
+- `HEDERA_SIGNER_MODE=disabled`
+- `GBF_CORS_ORIGIN=http://localhost:5173,https://your-project.vercel.app`
+- `GBF_ADMIN_EMAIL`
+- `GBF_ADMIN_PASSWORD`
+
+For live Hedera testnet execution, also provide:
 
 - `HEDERA_NETWORK=testnet`
 - `HEDERA_OPERATOR_ID`
@@ -54,7 +65,7 @@ For live Hedera testnet execution, provide:
 - `HEDERA_ENABLE_LIVE_SIGNING=true`
 - `HEDERA_SIGNER_MODE=local` or `HEDERA_SIGNER_MODE=remote`
 - `GBF_ENABLE_MAINNET=false` until explicit mainnet approval
-- `GBF_CORS_ORIGIN=http://localhost:5173`
+- `GBF_CORS_ORIGIN=http://localhost:5173,https://your-project.vercel.app`
 - `GBF_ADMIN_EMAIL`
 - `GBF_ADMIN_PASSWORD`
 
@@ -65,6 +76,49 @@ Signer deployment modes:
 - `disabled`: no live signing
 - `local`: the main API signs in-process
 - `remote`: the main API delegates Hedera execution to the remote signer service in `server/signer`
+
+`GBF_CORS_ORIGIN` accepts a comma-separated allowlist, so you can permit both localhost and your Vercel domain in one deployment.
+
+## Vercel deployment
+
+You can host both the frontend and API on Vercel from this repository alone.
+
+Project settings:
+
+- Root Directory: repository root
+- Framework Preset: `Other`
+- Install Command: `npm install`
+- Build Command: `npm run build`
+- Output Directory: `client/dist`
+
+Recommended Vercel environment variables:
+
+- `GBF_CORS_ORIGIN=https://your-project.vercel.app`
+- `GBF_ADMIN_EMAIL=admin@gbf.local`
+- `GBF_ADMIN_PASSWORD=ChangeMe123!`
+- `HEDERA_NETWORK=testnet`
+- `HEDERA_ENABLE_LIVE_SIGNING=false`
+- `HEDERA_SIGNER_MODE=disabled`
+- `GBF_ENABLE_MAINNET=false`
+
+Do not set `VITE_API_URL` when you want a Vercel-only deployment. In production the frontend now defaults to same-origin `/api`.
+
+The API is exposed through the Vercel function entrypoint in `api/[...path].js`, so the browser calls:
+
+- `https://your-project.vercel.app/api/overview`
+- `https://your-project.vercel.app/api/bonds`
+- `https://your-project.vercel.app/api/auth/me`
+
+without Railway in the path.
+
+Important limitation:
+
+- Vercel runs the backend serverlessly.
+- The current SQLite database is stored in temporary runtime storage there.
+- This is acceptable for demos and hackathons.
+- It is not durable enough for production persistence.
+
+If you need durable production data, replace SQLite with a hosted database such as Postgres, Neon, or Supabase.
 
 ## Useful scripts
 

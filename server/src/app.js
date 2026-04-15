@@ -13,6 +13,7 @@ import { requestContext, securityHeaders } from "./middleware/security.js";
 const app = express();
 const config = appConfig();
 const validation = validateEnvironment();
+const allowAllOrigins = config.corsOrigins.includes("*");
 
 getDb();
 
@@ -26,7 +27,14 @@ for (const warning of validation.warnings) {
 
 app.use(
   cors({
-    origin: config.corsOrigin
+    origin(origin, callback) {
+      if (!origin || allowAllOrigins || config.corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    }
   })
 );
 app.use(requestContext);
