@@ -41,10 +41,11 @@ function withAuthHeaders(options = {}) {
 }
 
 export async function fetchJson(path, options) {
-  const response = await fetch(`${API_BASE}${path}`, withAuthHeaders(options));
+  const url = `${API_BASE}${path}`;
+  const response = await fetch(url, withAuthHeaders(options));
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+    let message = `Request to ${url} failed with status ${response.status}`;
 
     try {
       const data = await response.json();
@@ -65,10 +66,11 @@ export async function fetchJson(path, options) {
 }
 
 export async function fetchAuth(path, options) {
-  const response = await fetch(`${AUTH_BASE}${path}`, withAuthHeaders(options));
+  const url = `${AUTH_BASE}${path}`;
+  const response = await fetch(url, withAuthHeaders(options));
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+    let message = `Request to ${url} failed with status ${response.status}`;
 
     try {
       const data = await response.json();
