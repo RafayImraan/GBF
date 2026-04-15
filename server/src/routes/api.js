@@ -1,4 +1,5 @@
 import { Router } from "express";
+import authRouter from "./auth.js";
 import {
   createAuditLog,
   computeOverviewKpis,
@@ -60,6 +61,8 @@ import { canUseLiveSigning } from "../lib/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 
 const router = Router();
+
+router.use("/auth", authRouter);
 
 function getProtocolSnapshot() {
   const bonds = getBonds();
