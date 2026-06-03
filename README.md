@@ -1,33 +1,86 @@
-# Global Green-Bond Fractionalizer (GBF)
+# Global Green-Bond Fractionalizer
 
-GBF is a full-stack DeFi project that democratizes access to institutional green bonds by fractionalizing them into $1 units and pairing every investment flow with live, verifiable ecological evidence on Hedera rails.
+![GBF hero dashboard](images/Screenshot%202026-06-03%20184856.png)
 
-The repo can now run as a Vercel-only demo deployment. Railway is not required unless you want to host a separate API or signer service.
+**Global Green-Bond Fractionalizer (GBF)** is a full-stack climate-finance demo that turns institutional green bonds into retail-accessible fractional units, then ties issuance, verification, and coupon workflows to live impact evidence.
 
-## What GBF delivers
+GBF combines a React operator dashboard, an Express API, SQLite persistence, Guardian-style policy checks, and Hedera Testnet integration concepts for HTS tokenization and HCS truth-stream publishing. It is built for teams exploring transparent climate finance, tokenized fixed income, dMRV, and verifiable green-bond servicing.
 
-- Fractional green bond issuance through a real-or-simulated HTS integration layer
-- Live dMRV telemetry publishing into a Truth Stream backed by HCS-style events
-- Guardian-style policy enforcement before coupon distribution can proceed
-- SQL-backed backend state, so bond programs, telemetry, and transactions survive restarts
-- Executive-grade frontend for investors, operators, and hackathon judges
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=111827)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Hedera](https://img.shields.io/badge/Hedera-Testnet-111827)](https://hedera.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-Persistence-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
 
-## Tech stack
+## Why GBF
 
-- Frontend: Vite, React, Tailwind CSS, Lucide React
-- Backend: Node.js, Express
-- Persistence: SQLite-backed lifecycle store
-- Hedera integration: `@hashgraph/sdk` with automatic fallback when live provisioning fails
-- Ops/security: structured logging, request IDs, security headers, metrics, signer isolation, launch gating
+Traditional green bonds are usually institutional, slow to verify, and opaque after issuance. GBF demonstrates how a modern climate-finance platform can make them more accessible and accountable:
 
-## Project layout
+- **Fractional access:** convert large green-bond programs into $1 Fractional Bond Token units.
+- **Impact-linked servicing:** connect payout readiness to dMRV progress and Guardian-style policy checks.
+- **Truth Stream auditability:** publish verification events through HCS-style telemetry records.
+- **Operator-grade workflows:** onboard bonds, mint FBTs, sync impact, schedule coupons, and inspect transactions from one dashboard.
+- **Demo-safe Hedera mode:** run locally with simulated execution, or enable live Hedera Testnet signing through explicit environment flags.
+- **Persistent backend state:** store bonds, investors, telemetry, transactions, listings, policies, and wallet links in SQLite.
 
-- `client/` frontend dashboard
-- `server/` API, SQL lifecycle store, Hedera services, seed script
-- `docs/architecture.md` technical walkthrough
-- `docs/demo-script.md` pitch/demo flow
+## Product Preview
 
-## Quick start
+| Platform overview | Bond onboarding |
+| --- | --- |
+| ![Executive platform overview](images/Screenshot%202026-06-03%20184911.png) | ![Bond onboarding workflow](images/Screenshot%202026-06-03%20184931.png) |
+
+| Bond registry | Fractionalization result |
+| --- | --- |
+| ![Bond registry with impact progress](images/Screenshot%202026-06-03%20185030.png) | ![Fractionalization transaction result](images/Screenshot%202026-06-03%20185049.png) |
+
+## Core Workflows
+
+1. **Onboard a green bond program**
+   Operators create a bond with issuer, face value, coupon rate, maturity, methodology, target metric, and Guardian policy status.
+
+2. **Provision verification infrastructure**
+   The API persists the bond and attempts to provision Hedera Consensus Service infrastructure. If live credentials are unavailable, GBF records a fallback transaction instead of blocking the demo.
+
+3. **Fractionalize into FBTs**
+   Authorized sessions can mint or simulate HTS-backed $1 Fractional Bond Tokens for the selected bond.
+
+4. **Sync dMRV evidence**
+   The platform generates a telemetry reading, evaluates policy readiness, appends a Truth Stream event, and updates verified impact progress.
+
+5. **Schedule coupon distribution**
+   Yield distribution is gated by policy checks, impact readiness, and operator/admin authorization.
+
+## Tech Stack
+
+| Layer | Tools |
+| --- | --- |
+| Frontend | Vite, React, Tailwind CSS, Lucide React |
+| Backend | Node.js, Express |
+| Persistence | SQLite-backed lifecycle store |
+| Ledger concepts | Hedera Token Service, Hedera Consensus Service, explicit live-signing controls |
+| Policy layer | Guardian-style policy evaluation |
+| Deployment | Vercel-ready frontend/API routing, Docker assets, optional signer service |
+
+## Repository Structure
+
+```text
+.
+|-- api/                    # Vercel serverless API entrypoint
+|-- client/                 # Vite + React dashboard
+|-- docs/                   # Architecture, demo script, launch notes, disclosures
+|-- images/                 # README screenshots
+|-- server/                 # Express API, SQLite store, Hedera services
+|   |-- signer/             # Optional remote signer process
+|   |-- src/routes/         # API and auth routes
+|   |-- src/services/       # Hedera, Guardian, signer gateway services
+|   `-- src/lib/            # DB, repository, env, auth, metrics, logging
+|-- docker-compose.yml
+|-- Dockerfile
+|-- package.json
+`-- vercel.json
+```
+
+## Quick Start
 
 ```bash
 npm install
@@ -36,54 +89,84 @@ npm install --prefix client
 npm run dev
 ```
 
-Default ports:
+Default local URLs:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:4000`
 
-If `4000` is already in use, start the server with another port such as `PORT=4100`.
+If port `4000` is already in use, start the server with another port:
 
-## Environment setup
+```bash
+PORT=4100 npm run dev --prefix server
+```
 
-Copy `server/.env.example` to `server/.env`.
+## Environment Setup
 
-For local development or a Vercel-only demo, these defaults are enough:
+Copy the server environment template:
 
-- `HEDERA_NETWORK=testnet`
-- `HEDERA_ENABLE_LIVE_SIGNING=false`
-- `HEDERA_SIGNER_MODE=disabled`
-- `GBF_CORS_ORIGIN=http://localhost:5173,https://your-project.vercel.app`
-- `GBF_ADMIN_EMAIL`
-- `GBF_ADMIN_PASSWORD`
+```bash
+cp server/.env.example server/.env
+```
 
-For live Hedera testnet execution, also provide:
+For local demo mode, keep live signing disabled:
 
-- `HEDERA_NETWORK=testnet`
-- `HEDERA_OPERATOR_ID`
-- `HEDERA_OPERATOR_KEY`
-- `HEDERA_TREASURY_ACCOUNT_ID`
-- `HEDERA_ENABLE_LIVE_SIGNING=true`
-- `HEDERA_SIGNER_MODE=local` or `HEDERA_SIGNER_MODE=remote`
-- `GBF_ENABLE_MAINNET=false` until explicit mainnet approval
-- `GBF_CORS_ORIGIN=http://localhost:5173,https://your-project.vercel.app`
-- `GBF_ADMIN_EMAIL`
-- `GBF_ADMIN_PASSWORD`
+```env
+HEDERA_NETWORK=testnet
+HEDERA_ENABLE_LIVE_SIGNING=false
+HEDERA_SIGNER_MODE=disabled
+GBF_ENABLE_MAINNET=false
+GBF_CORS_ORIGIN=http://localhost:5173
+GBF_ADMIN_EMAIL=admin@gbf.local
+GBF_ADMIN_PASSWORD=ChangeMe123!
+```
 
-If `HEDERA_ENABLE_LIVE_SIGNING` is not explicitly set to `true`, GBF keeps Hedera execution in fallback mode even when credentials exist. This is the safer default for live deployment work.
+For live Hedera Testnet execution, add the required operator and treasury credentials, then explicitly enable signing:
 
-Signer deployment modes:
+```env
+HEDERA_NETWORK=testnet
+HEDERA_OPERATOR_ID=
+HEDERA_OPERATOR_KEY=
+HEDERA_TREASURY_ACCOUNT_ID=
+HEDERA_ENABLE_LIVE_SIGNING=true
+HEDERA_SIGNER_MODE=local
+GBF_ENABLE_MAINNET=false
+```
 
-- `disabled`: no live signing
-- `local`: the main API signs in-process
-- `remote`: the main API delegates Hedera execution to the remote signer service in `server/signer`
+GBF is intentionally conservative: if `HEDERA_ENABLE_LIVE_SIGNING` is not set to `true`, the application stays in fallback mode even when credentials exist.
 
-`GBF_CORS_ORIGIN` accepts a comma-separated allowlist, so you can permit both localhost and your Vercel domain in one deployment.
+## Useful Scripts
 
-## Vercel deployment
+```bash
+npm run dev
+npm run build
+npm run start --prefix server
+npm run seed --prefix server
+npm run signer --prefix server
+npm run test --prefix server
+```
 
-You can host both the frontend and API on Vercel from this repository alone.
+## API Highlights
 
-Project settings:
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | API health check |
+| `GET` | `/api/overview` | Dashboard KPIs and platform status |
+| `GET` | `/api/bonds` | Bond registry |
+| `GET` | `/api/truth-stream` | dMRV and policy telemetry events |
+| `GET` | `/api/transactions` | Protocol activity log |
+| `GET` | `/api/market/listings` | Secondary-market listings |
+| `GET` | `/api/guardian/policies` | Guardian-style policy states |
+| `POST` | `/api/bonds` | Onboard a bond program |
+| `POST` | `/api/actions/fractionalize` | Mint or simulate FBT creation |
+| `POST` | `/api/actions/sync-impact` | Publish dMRV evidence |
+| `POST` | `/api/actions/distribute-yield` | Schedule coupon distribution |
+| `POST` | `/api/demo/reset` | Reset demo state |
+
+## Deployment
+
+GBF can run as a Vercel-only demo from this repository.
+
+Recommended Vercel settings:
 
 - Root Directory: repository root
 - Framework Preset: `Other`
@@ -93,84 +176,51 @@ Project settings:
 
 Recommended Vercel environment variables:
 
-- `GBF_CORS_ORIGIN=https://your-project.vercel.app`
-- `GBF_ADMIN_EMAIL=admin@gbf.local`
-- `GBF_ADMIN_PASSWORD=ChangeMe123!`
-- `HEDERA_NETWORK=testnet`
-- `HEDERA_ENABLE_LIVE_SIGNING=false`
-- `HEDERA_SIGNER_MODE=disabled`
-- `GBF_ENABLE_MAINNET=false`
+```env
+GBF_CORS_ORIGIN=https://your-project.vercel.app
+GBF_ADMIN_EMAIL=admin@gbf.local
+GBF_ADMIN_PASSWORD=ChangeMe123!
+HEDERA_NETWORK=testnet
+HEDERA_ENABLE_LIVE_SIGNING=false
+HEDERA_SIGNER_MODE=disabled
+GBF_ENABLE_MAINNET=false
+```
 
-Do not set `VITE_API_URL` when you want a Vercel-only deployment. In production the frontend now defaults to same-origin `/api`.
+Do not set `VITE_API_URL` when you want the frontend to call the same-origin Vercel API under `/api`.
 
-The API is exposed through the Vercel function entrypoint in `api/[...path].js`, so the browser calls:
+### Production Note
 
-- `https://your-project.vercel.app/api/overview`
-- `https://your-project.vercel.app/api/bonds`
-- `https://your-project.vercel.app/api/auth/me`
+The current Vercel deployment path uses serverless runtime storage, so SQLite data is suitable for demos and hackathons, not durable production persistence. For a production deployment, replace SQLite with hosted Postgres, Neon, Supabase, or another durable database.
 
-without Railway in the path.
+## Demo Script
 
-Important limitation:
+1. Open the dashboard and introduce GBF as a Hedera-powered platform for fractional green bonds.
+2. Sign in as an operator or admin.
+3. Onboard a new green bond program.
+4. Show the transaction result and fallback/live execution mode.
+5. Mint FBTs for the selected bond.
+6. Sync dMRV evidence and show the Truth Stream and impact progress update.
+7. Schedule coupon distribution once policy checks pass.
 
-- Vercel runs the backend serverlessly.
-- The current SQLite database is stored in temporary runtime storage there.
-- This is acceptable for demos and hackathons.
-- It is not durable enough for production persistence.
+## Documentation
 
-If you need durable production data, replace SQLite with a hosted database such as Postgres, Neon, or Supabase.
+- [Architecture](docs/architecture.md)
+- [Demo Script](docs/demo-script.md)
+- [Launch Checklist](docs/launch-checklist.md)
+- [Risk Disclosures](docs/risk-disclosures.md)
 
-## Useful scripts
+## Roadmap Ideas
 
- ```bash
- npm run dev
- npm run build --prefix client
- npm run seed --prefix server
- npm run signer --prefix server
- ```
+- Hosted durable database adapter
+- Wallet onboarding flow for investors
+- Real Guardian policy package integration
+- Expanded secondary-market settlement workflow
+- Mainnet-readiness checklist with stronger operational controls
+- Public hosted demo and video walkthrough
 
-## API highlights
+## Contributing
 
-- `GET /api/health`
-- `GET /api/overview`
-- `GET /api/bonds`
-- `GET /api/truth-stream`
-- `GET /api/transactions`
-- `GET /api/market/listings`
-- `GET /api/guardian/policies`
-- `GET /api/compliance/cases`
-- `GET /api/wallet-links`
-- `POST /api/bonds`
-- `POST /api/actions/fractionalize`
-- `POST /api/actions/sync-impact`
-- `POST /api/actions/distribute-yield`
-- `POST /api/actions/settle-allocation`
-- `POST /api/actions/transfer-holdings`
-- `POST /api/market/listings`
-- `POST /api/demo/reset`
+Contributions are welcome. The most useful improvements are focused pull requests that improve demo reliability, deepen Hedera/Guardian integration, harden production readiness, or improve the investor/operator experience.
 
-## Demo flow
+If this project helps you explore climate finance, tokenized assets, or dMRV infrastructure, star the repo so more builders can find it.
 
-1. Onboard a new bond program from the UI.
-2. Provision its Truth Stream infrastructure automatically.
-3. Mint FBTs from the operator console.
-4. Publish a new dMRV event and watch impact progress update.
-5. Schedule coupon distribution after Guardian checks pass.
-
-## Auth and roles
-
-- Read-only views are public.
-- `admin` and `operator` sessions can onboard bonds and run protocol actions.
-- Only `admin` can reset the SQL database.
-- Default local admin credentials come from `GBF_ADMIN_EMAIL` and `GBF_ADMIN_PASSWORD`.
-
-## Architecture
-
-See [docs/architecture.md](c:\Users\HomePC\Desktop\GBF\docs\architecture.md) for the system design and [docs/demo-script.md](c:\Users\HomePC\Desktop\GBF\docs\demo-script.md) for a short judge-ready walkthrough.
-
-## Additional launch assets
-
-- [launch-checklist.md](c:\Users\HomePC\Desktop\GBF\docs\launch-checklist.md)
-- [risk-disclosures.md](c:\Users\HomePC\Desktop\GBF\docs\risk-disclosures.md)
-- `docker-compose.yml`
-- `.github/workflows/ci.yml`
