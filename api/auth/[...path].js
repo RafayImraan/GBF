@@ -2,7 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import authRouter from "../../server/src/routes/auth.js";
-import { getDb } from "../../server/src/lib/db.js";
+import { initDb } from "../../server/src/lib/db.js";
 import { appConfig, validateEnvironment } from "../../server/src/lib/env.js";
 import { logEvent } from "../../server/src/lib/logger.js";
 import { metricsMiddleware } from "../../server/src/lib/metrics.js";
@@ -13,8 +13,6 @@ const app = express();
 const config = appConfig();
 const validation = validateEnvironment();
 const allowAllOrigins = config.corsOrigins.includes("*");
-
-getDb();
 
 if (!validation.ok) {
   throw new Error(validation.errors.join(" "));
@@ -41,6 +39,12 @@ app.use(securityHeaders);
 app.use(express.json({ limit: config.bodyLimit }));
 app.use(metricsMiddleware);
 app.use(attachAuth);
+
+const dbInit = initDb();
+
+app.use((req, res, next) => {
+  dbInit.then(() => next()).catch(next);
+});
 
 // Vercel route matching can hand this function different path prefixes.
 // Mount all likely variants so auth endpoints resolve deterministically.

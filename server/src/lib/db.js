@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import Database from "better-sqlite3";
+import initSqlJs from "sql.js";
 import { fileURLToPath } from "url";
 import { bondSeeds, investorSeeds, holdingSeeds, protocolOverviewSeed } from "../data/seed.js";
 import { hashPassword } from "./auth.js";
@@ -22,10 +22,95 @@ function currentTimestamp() {
   return new Date().toISOString();
 }
 
+class DbWrapper {
+  constructor(filePath) {
+    this.filePath = filePath;
+    this.db = null;
+  }
+
+  _load() {
+    try {
+      const data = fs.readFileSync(this.filePath);
+      this.db = new SQL.Database(data);
+    } catch {
+      this.db = new SQL.Database();
+    }
+  }
+
+  _save() {
+    if (this.filePath) {
+      const data = this.db.export();
+      fs.writeFileSync(this.filePath, Buffer.from(data));
+    }
+  }
+
+  exec(sql) {
+    this.db.run(sql);
+    this._save();
+  }
+
+  prepare(sql) {
+    return new StmtWrapper(this, sql);
+  }
+}
+
+class StmtWrapper {
+  constructor(dbw, sql) {
+    this.dbw = dbw;
+    this.sql = sql;
+  }
+
+  all(params) {
+    const stmt = this.dbw.db.prepare(this.sql);
+    if (params) stmt.bind([...params]);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    this.dbw._save();
+    return rows;
+  }
+
+  get(params) {
+    const stmt = this.dbw.db.prepare(this.sql);
+    if (params) stmt.bind([...params]);
+    let row = null;
+    if (stmt.step()) {
+      row = stmt.getAsObject();
+    }
+    stmt.free();
+    this.dbw._save();
+    return row;
+  }
+
+  run(...params) {
+    const stmt = this.dbw.db.prepare(this.sql);
+    if (params.length > 0) {
+      stmt.bind([...params.map((p) => (p === undefined ? null : p))]);
+    }
+    stmt.step();
+    stmt.free();
+    this.dbw._save();
+  }
+}
+
+let SQL;
+let dbReady;
+
+export async function initDb() {
+  ensureDataDir();
+  SQL = await initSqlJs();
+  const wrapper = new DbWrapper(databaseFilePath);
+  wrapper._load();
+  initializeSchema(wrapper);
+  seedDatabase(wrapper);
+  database = wrapper;
+  return wrapper;
+}
+
 function initializeSchema(db) {
   db.exec(`
-    PRAGMA journal_mode = WAL;
-
     CREATE TABLE IF NOT EXISTS protocol_overview (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       project_title TEXT NOT NULL,
@@ -397,10 +482,7 @@ function seedDatabase(db) {
 
 export function getDb() {
   if (!database) {
-    ensureDataDir();
-    database = new Database(databaseFilePath);
-    initializeSchema(database);
-    seedDatabase(database);
+    throw new Error("Database not initialized. Call initDb() first.");
   }
 
   return database;

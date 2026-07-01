@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import apiRouter from "./routes/api.js";
 import authRouter from "./routes/auth.js";
-import { getDb } from "./lib/db.js";
+import { initDb } from "./lib/db.js";
 import { appConfig, validateEnvironment } from "./lib/env.js";
 import { logEvent } from "./lib/logger.js";
 import { metricsMiddleware, snapshotMetrics } from "./lib/metrics.js";
@@ -14,8 +14,6 @@ const app = express();
 const config = appConfig();
 const validation = validateEnvironment();
 const allowAllOrigins = config.corsOrigins.includes("*");
-
-getDb();
 
 if (!validation.ok) {
   throw new Error(validation.errors.join(" "));
@@ -42,6 +40,12 @@ app.use(securityHeaders);
 app.use(express.json({ limit: config.bodyLimit }));
 app.use(metricsMiddleware);
 app.use(attachAuth);
+
+const dbInit = initDb();
+
+app.use((req, res, next) => {
+  dbInit.then(() => next()).catch(next);
+});
 
 app.get("/", (_req, res) => {
   res.json({
