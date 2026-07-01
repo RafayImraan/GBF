@@ -3,13 +3,11 @@ import os from "os";
 import path from "path";
 import initSqlJs from "sql.js";
 import { fileURLToPath } from "url";
-import { createRequire } from "module";
 import { bondSeeds, investorSeeds, holdingSeeds, protocolOverviewSeed } from "../data/seed.js";
 import { hashPassword } from "./auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const _require = createRequire(__filename);
 const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const dataDir = isServerlessRuntime ? path.join(os.tmpdir(), "gbf-data") : path.resolve(__dirname, "../../data");
 const databaseFilePath = path.join(dataDir, "gbf.sqlite");
@@ -102,14 +100,9 @@ let dbReady;
 
 export async function initDb() {
   ensureDataDir();
-  let wasmBinary;
-  try {
-    const wasmPath = _require.resolve("sql.js/dist/sql-wasm.wasm");
-    wasmBinary = fs.readFileSync(wasmPath);
-  } catch {
-    // Fallback: let sql.js find the WASM itself
-  }
-  SQL = await initSqlJs(wasmBinary ? { wasmBinary } : undefined);
+  SQL = await initSqlJs({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/sql.js@1.11.0/dist/${file}`
+  });
   const wrapper = new DbWrapper(databaseFilePath);
   wrapper._load();
   initializeSchema(wrapper);
