@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { DatabaseSync } from "node:sqlite";
+import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 import { bondSeeds, investorSeeds, holdingSeeds, protocolOverviewSeed } from "../data/seed.js";
 import { hashPassword } from "./auth.js";
@@ -398,7 +398,7 @@ function seedDatabase(db) {
 export function getDb() {
   if (!database) {
     ensureDataDir();
-    database = new DatabaseSync(databaseFilePath);
+    database = new Database(databaseFilePath);
     initializeSchema(database);
     seedDatabase(database);
   }

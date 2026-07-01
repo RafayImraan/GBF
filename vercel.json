@@ -1,7 +1,6 @@
 {
   "nodeVersion": "22.x",
   "framework": "vite",
-  "installCommand": "npm install --prefix client && npm install --prefix server",
   "buildCommand": "npm run build",
   "outputDirectory": "client/dist",
   "rewrites": [
