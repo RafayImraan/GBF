@@ -1,6 +1,7 @@
 {
   "name": "global-green-bond-fractionalizer",
   "private": true,
+  "workspaces": ["server", "client"],
   "version": "1.0.0",
   "description": "Global Green-Bond Fractionalizer (GBF) full-stack demo on Hedera testnet concepts",
   "scripts": {
